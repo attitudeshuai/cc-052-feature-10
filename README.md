@@ -30,7 +30,13 @@
 
 ## 6. 接口设计（节选）
 ```
-POST /api/v1/farms                          创建农场/合作社
+POST /api/v1/farms                          创建农场/合作社（归一化判重，见第 13 节）
+PUT  /api/v1/farms/{id}                     修改档案（名称/地区/资质改动自动留前后两版）
+GET  /api/v1/farms/{id}/revisions           档案改动历史
+GET  /api/v1/reports/cert-issues            资质编号重复 + 已到期清单（给到期日）
+POST /api/v1/farms/cleanup                  老数据归一化清洗（默认 dry_run，body {"apply":true} 落库）
+GET  /api/v1/regions                        行政区划字典（?level=3 过滤县级）
+POST /api/v1/regions/aliases                登记地区老写法别名（{"alias":"青龙县","region_code":"130321"}）
 POST /api/v1/plots                          地块登记
 POST /api/v1/batches                        创建种植批次
 POST /api/v1/batches/{id}/activities        农事记录（支持数组批量，client_uuid 幂等）
@@ -39,6 +45,16 @@ POST /api/v1/batches/{id}/codes             生成溯源码（返回数量与短
 GET  /api/v1/trace/{code}                   公开溯源查询（无需鉴权，限流）
 GET  /api/v1/trace/{code}/qrcode            返回二维码 PNG（带缓存头）
 ```
+
+## 13. 合作社档案：归一化判重 / 资质核验 / 历史留痕 / 老数据清洗
+
+痛点：地区编码与资质编号手写随心、同县多种写法、资质空着也建档、名字差一个字分不清。
+
+- **建档判重（`POST /farms`）**：服务端对名称与地区做归一化（NFKC 全半角折叠、大小写、去空白、剥「农民专业合作社/专业合作社/合作社/家庭农场/公司」后缀；地区支持 6 位/12 位码、别名、标准名、核心名兜底）。按 `(归一地区, 归一名称)` 判重，命中返回 **409** 并在 `data.existing` 中给出已存在的是哪一家；资质编号归一后被别家占用同样 409 并指出占用方。**空资质允许建档，且两家都空不互相冲突**；资质已到期不阻断建档，在 `warnings` 中给出到期日与过期天数。
+- **资质问题清单（`GET /reports/cert-issues`）**：`duplicates` 按归一组列出同号的所有合作社（含各家原始写法 `raw_cert_nos`），`expired` 给出到期日与过期天数。
+- **改动留痕（`PUT /farms/{id}`）**：名称、地区、资质编号发生变化时，在 `farm_revision` 中保存改动前后两版，`GET /farms/{id}/revisions` 可查；修改后撞名/撞资质号同样 409。
+- **老数据清洗（`POST /farms/cleanup`）**：默认 `dry_run` 只出方案；`{"apply":true}` 单事务逐行把地区写法改到标准码、组内名称统一、资质号大写归一，并为每行写 revision。返回条数对账（`total_scanned == total_after`、`changed+unchanged+unresolved == total`），**清洗不删行、不自动合并**：归一后仍重名的在 `collisions` 列出（如涉及地块/批次归属需人工裁定），无法识别的地区在 `unresolved` 列出，登记别名后可再次清洗。二次清洗幂等。
+- **字典与别名**：`region_dict`（标准码）+ `region_alias`（老写法→标准码），种子见 `seed/regions_and_farms.sql`，迁移见 `migrations/002_farm_normalization.sql`。
 
 ## 7. 数据模型
 ```sql

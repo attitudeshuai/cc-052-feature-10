@@ -16,6 +16,7 @@ func Setup(
 	activityH *handler.ActivityHandler,
 	inspectionH *handler.InspectionHandler,
 	traceCodeH *handler.TraceCodeHandler,
+	regionH *handler.RegionHandler,
 	healthH *handler.HealthHandler,
 	rdb *redis.Client,
 ) *gin.Engine {
@@ -27,10 +28,21 @@ func Setup(
 	// API v1
 	v1 := r.Group("/api/v1")
 	{
-		// Farms
+		// Farms / 合作社档案
 		v1.POST("/farms", farmH.Create)
+		v1.POST("/farms/cleanup", farmH.Cleanup) // 老数据归一化清洗（默认 dry_run）
 		v1.GET("/farms", farmH.List)
 		v1.GET("/farms/:id", farmH.GetByID)
+		v1.PUT("/farms/:id", farmH.Update)
+		v1.GET("/farms/:id/revisions", farmH.Revisions)
+
+		// 资质问题：编号重复 / 已到期（给到期日）
+		v1.GET("/reports/cert-issues", farmH.CertIssues)
+
+		// 行政区划字典与老写法别名
+		v1.GET("/regions", regionH.ListDict)
+		v1.GET("/regions/aliases", regionH.ListAliases)
+		v1.POST("/regions/aliases", regionH.UpsertAlias)
 
 		// Plots
 		v1.POST("/plots", plotH.Create)

@@ -50,3 +50,11 @@ func InternalError(c *gin.Context, message string) {
 func Forbidden(c *gin.Context, message string) {
 	Error(c, http.StatusForbidden, message)
 }
+
+func Conflict(c *gin.Context, message string, data interface{}) {
+	c.JSON(http.StatusConflict, APIResponse{
+		Code:    http.StatusConflict,
+		Message: message,
+		Data:    data,
+	})
+}
