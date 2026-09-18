@@ -68,6 +68,13 @@ func main() {
 	inspectionSvc := service.NewInspectionService(inspectionRepo, batchRepo)
 	traceCodeSvc := service.NewTraceCodeService(codeRepo, batchRepo, inspectionRepo, activityRepo, plotRepo, farmRepo)
 
+	// Backfill normalized dedup keys for legacy farm rows
+	if n, err := farmSvc.BackfillNorms(); err != nil {
+		log.Printf("warning: farm norm backfill error: %v", err)
+	} else if n > 0 {
+		log.Printf("farm norm backfill updated %d rows", n)
+	}
+
 	// Handlers
 	farmH := handler.NewFarmHandler(farmSvc)
 	plotH := handler.NewPlotHandler(plotSvc)

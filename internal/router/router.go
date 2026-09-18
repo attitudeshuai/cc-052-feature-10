@@ -30,7 +30,11 @@ func Setup(
 		// Farms
 		v1.POST("/farms", farmH.Create)
 		v1.GET("/farms", farmH.List)
+		v1.GET("/farms/cert-issues", farmH.CertIssues)
+		v1.POST("/farms/normalize", farmH.Normalize)
 		v1.GET("/farms/:id", farmH.GetByID)
+		v1.PUT("/farms/:id", farmH.Update)
+		v1.GET("/farms/:id/changes", farmH.Changes)
 
 		// Plots
 		v1.POST("/plots", plotH.Create)

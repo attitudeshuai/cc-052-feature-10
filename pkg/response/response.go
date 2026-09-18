@@ -50,3 +50,13 @@ func InternalError(c *gin.Context, message string) {
 func Forbidden(c *gin.Context, message string) {
 	Error(c, http.StatusForbidden, message)
 }
+
+// Conflict reports a duplicate with the conflicting record attached, so the
+// caller can see exactly which existing archive it collided with.
+func Conflict(c *gin.Context, message string, data interface{}) {
+	c.JSON(http.StatusConflict, APIResponse{
+		Code:    http.StatusConflict,
+		Message: message,
+		Data:    data,
+	})
+}

@@ -30,7 +30,11 @@
 
 ## 6. 接口设计（节选）
 ```
-POST /api/v1/farms                          创建农场/合作社
+POST /api/v1/farms                          创建农场/合作社（按归一后地区+名称判重，重名 409 并返回已存在档案；资质编号与到期日必填）
+PUT  /api/v1/farms/{id}                     更新档案（名称/地区变更自动留痕，前后两版可查）
+GET  /api/v1/farms/{id}/changes             名称/地区变更记录（改动前后两版）
+GET  /api/v1/farms/cert-issues              资质问题清单：编号重复 / 已到期（含到期日），分开列出
+POST /api/v1/farms/normalize                老数据批量归一：多种写法一次改到同一取值，返回前后条数校验
 POST /api/v1/plots                          地块登记
 POST /api/v1/batches                        创建种植批次
 POST /api/v1/batches/{id}/activities        农事记录（支持数组批量，client_uuid 幂等）
